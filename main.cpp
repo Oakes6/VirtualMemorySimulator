@@ -13,7 +13,7 @@
 // loads frame into main memory, updates page table, and updates TLB
 void pageFaultHandler(unsigned char pageNumber, unsigned char &frameNumber, PhysicalMemory &mm, PageTable &pt, TLB &tlb) {
    frameNumber = mm.loadFrame(pageNumber);
-   pt.updatePageTable(frameNumber);
+   pt.updatePageTable(pageNumber, frameNumber);
    tlb.replaceLRU(pageNumber, frameNumber);
 }
 
@@ -85,13 +85,11 @@ int main(int argc, const char * argv[]) {
    int value;
    vector<Driver::address_value_pair> address_value_list;
 
-   // Boolean for TLB hit and page fault
-   bool isTLBHit;
-   bool isPageFault;
-
    // number of page faults and tlb hits
    int pageFaultCount = 0;
+   int pageTableHitCount = 0;
    int tlbHitCount = 0;
+   int errors = 0;
 
    // Initialize the system
    tlb.initTLB();
@@ -119,16 +117,15 @@ int main(int argc, const char * argv[]) {
       // go to page table
       else {
          // found in page table
-         if (pt.isValidPage(pageNumber)) {
-            isPageFault = false;
-            frameNumber = (unsigned char)(pt.returnFrameNumber(pageNumber).to_ulong());
-            cout << to_string(frameNumber) << endl;
+         if (pt.returnFrameNumber(pageNumber) != -99) {
+            pageTableHitCount++;
+            frameNumber = (unsigned char)(pt.returnFrameNumber(pageNumber));
             physicalAddress = createPhysicalAddress(frameNumber, offset);
             tlb.replaceLRU(pageNumber, frameNumber);
+            assert(pageNumber != frameNumber);
          }
          else {
             // handles a page fault,
-            isPageFault = true;
             pageFaultCount++;
             pageFaultHandler(pageNumber, frameNumber, mm, pt, tlb);
             physicalAddress = createPhysicalAddress(frameNumber, offset);
@@ -140,6 +137,9 @@ int main(int argc, const char * argv[]) {
 
       cout << i << "th: pageNumber: " << to_string(pageNumber) << endl;
       cout << i << "th: frameNumber: " << to_string(frameNumber) << endl;
+      if (pageNumber == frameNumber) {
+         errors++;
+      }
       // Update the addres-value list
       Driver::address_value_pair pair;
       pair.logicalAddress = logicalAddresses[i];
@@ -151,6 +151,9 @@ int main(int argc, const char * argv[]) {
    float pageFaultRate = calculatePageFaultRate(numOfAddresses, pageFaultCount);
    cout << "Number of page faults: " << to_string(pageFaultCount) << endl;
    cout << "Number of tlb hits: " << to_string(tlbHitCount) << endl;
+   cout << "Number of page table hits: " << to_string(pageTableHitCount) << endl;
+   cout << "Number of potential errors: " << to_string(errors) << endl;
+
    float tlbHitRate = calculateTlbHitRate(numOfAddresses, tlbHitCount);
    // Output the address-value list into an output file
    writeToFile("output.txt", address_value_list, pageFaultRate, tlbHitRate);
