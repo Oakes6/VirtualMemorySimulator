@@ -12,21 +12,56 @@
 
 // loads frame into main memory, updates page table, and updates TLB
 void pageFaultHandler(unsigned char pageNumber, unsigned char &frameNumber, PhysicalMemory &mm, PageTable &pt, TLB &tlb) {
-   frameNumber = mm.loadFrame();
-   pt.updatePageTable(pageNumber);
+   frameNumber = mm.loadFrame(pageNumber);
+   pt.updatePageTable(frameNumber);
    tlb.replaceLRU(pageNumber, frameNumber);
-
 }
 
+// connects a frameNumber and offset to form a physical address
 unsigned int createPhysicalAddress(unsigned char frameNumber, unsigned char offset) {
-   string frameNumberStr = to_string(frameNumber);
-   string offsetStr = to_string(offset);
+   bitset<8> frameNumberBits (frameNumber);
+   bitset<8> offsetBits (offset);
+   string frameNumberStr = frameNumberBits.to_string();
+   string offsetStr = offsetBits.to_string();
    string physicalAddressStr = frameNumberStr + offsetStr;
 
-   unsigned int physicalAddress = stoi(physicalAddressStr, nullptr);
+   unsigned int physicalAddress = stoi(physicalAddressStr, nullptr, 2);
 
    return physicalAddress;
 }
+
+void writeToFile(string filename, vector<Driver::address_value_pair> address_value_list, float pageFaultRate, float tlbHitRate) {
+   ofstream writeStream;
+
+   writeStream.open(filename);
+
+   if (writeStream.good()) {
+      // do work
+      for (int i = 0; i < address_value_list.size(); i++) {
+         writeStream << "Virtual address: " << address_value_list[i].logicalAddress
+            << "; Physical address: " << address_value_list[i].physicalAddress
+            << "; Value: " << address_value_list[i].value << "\n";
+      }
+      // write the page fault rate
+      writeStream << "Page fault rate: " << pageFaultRate * 100 << "%\n";
+      writeStream << "TLB hit rate: " << tlbHitRate * 100 << "%\n";
+
+      // write the TLB hit rate
+      writeStream.close();
+   }
+   else {
+      cout << "**** Something is wrong with the wright stream ***" << endl;
+   }
+}
+
+float calculatePageFaultRate(float numberOfAddresses, float pageFaultCount) {
+   return pageFaultCount / numberOfAddresses;
+}
+
+float calculateTlbHitRate(float numberOfAddresses, float tlbHitCount) {
+   return tlbHitCount / numberOfAddresses;
+}
+
 
 int main(int argc, const char * argv[]) {
    // Vars: page number, frame number and offset
@@ -35,6 +70,8 @@ int main(int argc, const char * argv[]) {
    unsigned char offset;
 
    //Addresses
+   unsigned int physicalAddress;
+   unsigned int logicalAddress;
 
    // The TLB and page table
    TLB tlb;
@@ -52,7 +89,9 @@ int main(int argc, const char * argv[]) {
    bool isTLBHit;
    bool isPageFault;
 
-   // Input and output file names
+   // number of page faults and tlb hits
+   int pageFaultCount = 0;
+   int tlbHitCount = 0;
 
    // Initialize the system
    tlb.initTLB();
@@ -60,6 +99,7 @@ int main(int argc, const char * argv[]) {
    // Create a logical address list from the file
    // loads input addresses into vector
    vector<unsigned int> logicalAddresses = driver.loadAddresses("InputFile.txt");
+   int numOfAddresses = logicalAddresses.size();
 
    for (int i = 0; i < logicalAddresses.size(); i++) {
       // Get a logical address, its page number and offset
@@ -70,36 +110,51 @@ int main(int argc, const char * argv[]) {
       // If a TLB hit occurs, return the frame number
       // else, go to the page table
       if (tlb.checkTLB(pageNumber) != -99) {
+
          // create physical address
          frameNumber = tlb.checkTLB(pageNumber);
+         physicalAddress = createPhysicalAddress(frameNumber, offset);
+         tlbHitCount++;
       }
       // go to page table
       else {
+         // found in page table
          if (pt.isValidPage(pageNumber)) {
             isPageFault = false;
             frameNumber = (unsigned char)(pt.returnFrameNumber(pageNumber).to_ulong());
+            cout << to_string(frameNumber) << endl;
+            physicalAddress = createPhysicalAddress(frameNumber, offset);
+            tlb.replaceLRU(pageNumber, frameNumber);
          }
-         // page fault
          else {
+            // handles a page fault,
+            isPageFault = true;
+            pageFaultCount++;
             pageFaultHandler(pageNumber, frameNumber, mm, pt, tlb);
+            physicalAddress = createPhysicalAddress(frameNumber, offset);
 
          }
       }
       // read one byte value from main memory
       value = mm.lookUp(frameNumber, offset);
 
+      cout << i << "th: pageNumber: " << to_string(pageNumber) << endl;
+      cout << i << "th: frameNumber: " << to_string(frameNumber) << endl;
       // Update the addres-value list
       Driver::address_value_pair pair;
-      pair.physicalAddress = createPhysicalAddress(frameNumber, offset);
+      pair.logicalAddress = logicalAddresses[i];
+      pair.physicalAddress = physicalAddress;
       pair.value = mm.lookUp(frameNumber, offset);
       address_value_list.push_back(pair);
    }
 
-   mm.loadFrame();
-   mm.loadFrame();
-
-   cout << tlb.checkTLB(0) << endl;
-   cout << tlb.checkTLB(1) << endl;
+   float pageFaultRate = calculatePageFaultRate(numOfAddresses, pageFaultCount);
+   cout << "Number of page faults: " << to_string(pageFaultCount) << endl;
+   cout << "Number of tlb hits: " << to_string(tlbHitCount) << endl;
+   float tlbHitRate = calculateTlbHitRate(numOfAddresses, tlbHitCount);
+   // Output the address-value list into an output file
+   writeToFile("output.txt", address_value_list, pageFaultRate, tlbHitRate);
+   // end of main
 
    return 0;
 }

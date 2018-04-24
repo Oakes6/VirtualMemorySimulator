@@ -18,7 +18,7 @@ public:
    PhysicalMemory() : nextEmptyEntryIndex(0) {}
 
    char lookUp(unsigned char frameNumber,unsigned char offset);
-   unsigned char loadFrame();
+   unsigned char loadFrame(unsigned char pageNumber);
 
 private:
    const static int PHYS_MEM_SIZE = 256;

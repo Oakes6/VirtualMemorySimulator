@@ -71,9 +71,9 @@ void TLB::replaceLRU(unsigned char pageNumber, unsigned char frameNumber) {
          }
       }
 
-      // if entry not found, either replace the oldest entry or insert a new one
+      // if oldest entry not found, either replace the oldest entry or insert a new one
       if (!found) {
-         if (tlb_t[nextEntryIndex].isValid == false) {
+         if (!isFull()) {
             assert(nextEntryIndex >= 0 && nextEntryIndex < TLB_SIZE);
             entry.pageNumber = pageNumber;
             entry.frameNumber = frameNumber;

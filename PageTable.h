@@ -15,10 +15,6 @@ using namespace std;
 class PageTable {
 public:
    PageTable() : page_table_t(PAGE_TABLE_SIZE), nextEmptyEntryIndex(0) {}
-   // PageTable() {
-   //    page_table_t(PAGE_TABLE_SIZE);
-   //    nextEmptyEntryIndex = 0;
-   // };
 
    // void initializePageTable();
    bool isValidPage(unsigned char pageNumber);
