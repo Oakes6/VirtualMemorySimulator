@@ -1,6 +1,6 @@
 #include "TLB.h"
 
-// initializes the tlb with appropriate entries
+// initializes the tlb with appropriate entries 0
 void TLB::initTLB() {
 
    tlb_entry entry;

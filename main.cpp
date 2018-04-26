@@ -14,7 +14,6 @@
 void pageFaultHandler(unsigned char pageNumber, unsigned char &frameNumber, PhysicalMemory &mm, PageTable &pt, TLB &tlb) {
    frameNumber = mm.loadFrame(pageNumber);
    pt.updatePageTable(pageNumber, frameNumber);
-   tlb.replaceLRU(pageNumber, frameNumber);
 }
 
 // connects a frameNumber and offset to form a physical address
@@ -40,7 +39,7 @@ void writeToFile(string filename, vector<Driver::address_value_pair> address_val
       for (int i = 0; i < address_value_list.size(); i++) {
          writeStream << "Virtual address: " << address_value_list[i].logicalAddress
             << "; Physical address: " << address_value_list[i].physicalAddress
-            << "; Value: " << address_value_list[i].value << "\n";
+            << "; Value: " << (int) address_value_list[i].value << "\n";
       }
       // write the page fault rate
       writeStream << "Page fault rate: " << pageFaultRate * 100 << "%\n";
@@ -64,6 +63,9 @@ float calculateTlbHitRate(float numberOfAddresses, float tlbHitCount) {
 
 
 int main(int argc, const char * argv[]) {
+   // User choice
+   int choice;
+
    // Vars: page number, frame number and offset
    unsigned char pageNumber;
    unsigned char frameNumber;
@@ -99,6 +101,21 @@ int main(int argc, const char * argv[]) {
    vector<unsigned int> logicalAddresses = driver.loadAddresses("InputFile.txt");
    int numOfAddresses = logicalAddresses.size();
 
+   cout << "Welcome to Tanner's VM Simulator Version 1.0" << endl << endl;
+   cout << "Number of logical pages: 256" << endl;
+   cout << "Page size: 256 bytes" << endl;
+   cout << "Page table size: 256" << endl;
+   cout << "TLB size: 16 entries" << endl;
+   cout << "Number of physical frames: 256" << endl;
+   cout << "Physical memory size: 65,536 bytes" << endl << endl;
+   cout << "Choose TLB Replacement Strategy [1: FIFO, 2: LRU] ";
+
+   while (!(cin >> choice) || choice <= 0 || choice >= 3) {
+      cin.clear();
+      cin.ignore();
+      cout << "Invalid input. Try again: ";
+   }
+
    for (int i = 0; i < logicalAddresses.size(); i++) {
       // Get a logical address, its page number and offset
       pageNumber = driver.extractPageNumber(logicalAddresses[i]);
@@ -121,13 +138,24 @@ int main(int argc, const char * argv[]) {
             pageTableHitCount++;
             frameNumber = (unsigned char)(pt.returnFrameNumber(pageNumber));
             physicalAddress = createPhysicalAddress(frameNumber, offset);
-            tlb.replaceLRU(pageNumber, frameNumber);
-            assert(pageNumber != frameNumber);
+            if (choice == 1) {
+               tlb.replaceFIFO(pageNumber, frameNumber);
+            }
+            else {
+               tlb.replaceLRU(pageNumber, frameNumber);
+            }
+            // assert(pageNumber != frameNumber);
          }
          else {
             // handles a page fault,
             pageFaultCount++;
             pageFaultHandler(pageNumber, frameNumber, mm, pt, tlb);
+            if (choice == 1) {
+               tlb.replaceFIFO(pageNumber, frameNumber);
+            }
+            else {
+               tlb.replaceLRU(pageNumber, frameNumber);
+            }
             physicalAddress = createPhysicalAddress(frameNumber, offset);
 
          }
@@ -135,8 +163,6 @@ int main(int argc, const char * argv[]) {
       // read one byte value from main memory
       value = mm.lookUp(frameNumber, offset);
 
-      cout << i << "th: pageNumber: " << to_string(pageNumber) << endl;
-      cout << i << "th: frameNumber: " << to_string(frameNumber) << endl;
       if (pageNumber == frameNumber) {
          errors++;
       }
@@ -152,7 +178,8 @@ int main(int argc, const char * argv[]) {
    cout << "Number of page faults: " << to_string(pageFaultCount) << endl;
    cout << "Number of tlb hits: " << to_string(tlbHitCount) << endl;
    cout << "Number of page table hits: " << to_string(pageTableHitCount) << endl;
-   cout << "Number of potential errors: " << to_string(errors) << endl;
+   cout << "Number of potential instances: " << to_string(errors) << endl << endl;
+   cout << "*** Results printed to output.txt ***" << endl;
 
    float tlbHitRate = calculateTlbHitRate(numOfAddresses, tlbHitCount);
    // Output the address-value list into an output file

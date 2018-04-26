@@ -5,6 +5,7 @@
 #ifndef Driver_h
 #define Driver_h
 
+#include <algorithm>
 #include <bitset>
 #include <stdlib.h>
 #include <string>

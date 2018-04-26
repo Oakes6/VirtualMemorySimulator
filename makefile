@@ -1,5 +1,5 @@
 virtual_memory: Driver.cpp main.cpp PageTable.cpp PhysicalMemory.cpp TLB.cpp
-	g++ -o virtual_memory Driver.cpp main.cpp PageTable.cpp PhysicalMemory.cpp TLB.cpp
+	g++ -std=c++11 -o virtual_memory Driver.cpp main.cpp PageTable.cpp PhysicalMemory.cpp TLB.cpp
 
 # virtual_memory: Driver.o TLB.o PageTable.o main.o
 # 	g++ -o virtual_memory Driver.o TLB.o PageTable.o main.o

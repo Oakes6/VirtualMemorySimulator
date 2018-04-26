@@ -12,10 +12,6 @@ unsigned char PhysicalMemory::loadFrame(unsigned char pageNumber) {
       readStream.read(physical_memory_t[nextEmptyEntryIndex], 256);
       nextEmptyEntryIndex++;
 
-      if (readStream)
-         std::cout << "all characters read successfully." << endl;
-      else
-         std::cout << "error: only " << readStream.gcount() << " could be read";
       readStream.close();
    }
    else {

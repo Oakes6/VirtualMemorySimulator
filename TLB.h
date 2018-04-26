@@ -5,6 +5,7 @@
 #ifndef TLB_h
 #define TLB_h
 
+#include <cassert>
 #include <iostream>
 #include <stdlib.h>
 #include <vector>
